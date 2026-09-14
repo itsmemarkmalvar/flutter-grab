@@ -169,6 +169,12 @@ flutter run -d macos # or chrome, ios, android
 
 ---
 
+## 👨‍💻 Author
+
+Created and maintained by **Mark Joseph Malvar** ([@itsmemarkmalvar](https://github.com/itsmemarkmalvar)).
+
+---
+
 ## 📄 License
 
 MIT License. See [LICENSE](LICENSE) for details.
