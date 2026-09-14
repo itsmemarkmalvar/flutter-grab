@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_grab/flutter_grab.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  group('GrabController', () {
+    late GrabController controller;
+
+    setUp(() {
+      controller = GrabController();
+    });
+
+    tearDown(() {
+      controller.dispose();
+    });
+
+    test('initial state is inactive', () {
+      expect(controller.isActive, isFalse);
+      expect(controller.activeCandidate, isNull);
+      expect(controller.hasCopied, isFalse);
+    });
+
+    test('toggleActive toggles state', () {
+      controller.toggleActive();
+      expect(controller.isActive, isTrue);
+
+      controller.toggleActive();
+      expect(controller.isActive, isFalse);
+    });
+
+    test('activate and deactivate work as expected', () {
+      controller.activate();
+      expect(controller.isActive, isTrue);
+
+      controller.deactivate();
+      expect(controller.isActive, isFalse);
+    });
+
+    testWidgets('copyActiveContext copies prompt to clipboard', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: Text('Test Target'),
+            ),
+          ),
+        ),
+      );
+
+      final element = tester.element(find.text('Test Target'));
+      final candidate = WidgetCandidate(
+        element: element,
+        renderBox: element.renderObject as RenderBox?,
+        bounds: const Rect.fromLTWH(0, 0, 100, 50),
+        result: const GrabResult(
+          widgetName: 'Text',
+          filePath: 'lib/test.dart',
+          line: 10,
+        ),
+      );
+
+      controller.activate();
+      controller.selectCandidate(candidate);
+      expect(controller.activeCandidate, candidate);
+
+      // Track clipboard calls
+      String? copiedClipboardText;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'Clipboard.setData') {
+            final args = methodCall.arguments as Map<dynamic, dynamic>;
+            copiedClipboardText = args['text'] as String?;
+            return null;
+          }
+          return null;
+        },
+      );
+
+      final success = await controller.copyActiveContext();
+      expect(success, isTrue);
+      expect(controller.hasCopied, isTrue);
+      expect(copiedClipboardText, contains('Selected Widget: `Text`'));
+      expect(copiedClipboardText, contains('lib/test.dart:10'));
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(controller.hasCopied, isFalse);
+    });
+  });
+}

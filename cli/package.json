@@ -1,0 +1,24 @@
+{
+  "name": "flutter-grab",
+  "version": "0.1.0",
+  "description": "Visual widget grabber for Flutter apps to copy source location and component context for AI coding assistants",
+  "bin": {
+    "flutter-grab": "./bin/index.js"
+  },
+  "keywords": [
+    "flutter",
+    "widget",
+    "grab",
+    "inspector",
+    "cursor",
+    "claude",
+    "copilot",
+    "devtools",
+    "ai"
+  ],
+  "files": [
+    "bin"
+  ],
+  "author": "Flutter Grab Contributors",
+  "license": "MIT"
+}
