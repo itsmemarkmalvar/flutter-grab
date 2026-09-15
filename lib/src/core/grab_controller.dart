@@ -146,6 +146,11 @@ class GrabController extends ChangeNotifier {
     final formattedText = formatter.format(result);
     await Clipboard.setData(ClipboardData(text: formattedText));
 
+    // Print to console so developers running on wireless/remote devices see it in their terminal
+    debugPrint('\n════════════════════ [🎯 Flutter Grab AI Context] ════════════════════\n'
+        '$formattedText\n'
+        '═══════════════════════════════════════════════════════════════════════\n');
+
     // Optional haptic feedback
     try {
       HapticFeedback.mediumImpact();
