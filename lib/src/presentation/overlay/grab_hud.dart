@@ -196,23 +196,32 @@ class _GrabHudState extends State<GrabHud> {
               }
             },
             child: Material(
-              elevation: 8,
+              elevation: 10,
+              shadowColor: Colors.black54,
               borderRadius: BorderRadius.circular(16),
-              color: const Color(0xF0181825), // Sleek deep slate
+              color: const Color(0xFF181825), // 100% solid opaque to prevent underlying UI bleed-through
               child: Container(
                 decoration: BoxDecoration(
+                  color: const Color(0xFF181825),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: const Color(0x336366F1),
                     width: 1,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Row: Drag Handle + Widget Name + Action Buttons
+                    // Row 1: Title Bar (Drag Handle + Badge + Widget Name + Utility Icons)
                     Row(
                       children: [
                         // Drag Indicator
@@ -243,96 +252,19 @@ class _GrabHudState extends State<GrabHud> {
                         ),
                         const SizedBox(width: 8),
 
-                        // Widget Name
+                        // Widget Name (Takes remaining space without crowding)
                         Expanded(
                           child: Text(
                             candidate.widgetName,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                               fontFamily: 'monospace',
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-
-                        // Multi-Grab Toggle Button
-                        InkWell(
-                          onTap: () => widget.controller.toggleMultiSelectMode(),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isMulti
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0x226366F1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isMulti
-                                    ? const Color(0xFF34D399)
-                                    : const Color(0x446366F1),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isMulti ? Icons.check_box_rounded : Icons.add_box_rounded,
-                                  size: 12,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  isMulti ? 'Multi (${batch.length})' : '+ Multi',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 6),
-
-                        // Copy Button
-                        ElevatedButton.icon(
-                          onPressed: () => widget.controller.copyActiveContext(),
-                          icon: Icon(
-                            hasCopied ? Icons.check_circle : Icons.copy_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            hasCopied
-                                ? (batch.length > 1 ? 'Copied All!' : 'Copied!')
-                                : (batch.length > 1
-                                    ? 'Grab All (${batch.length})'
-                                    : 'Grab Context'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: hasCopied
-                                ? const Color(0xFF10B981)
-                                : const Color(0xFF6366F1),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            minimumSize: Size.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 4),
 
                         // Flip Position Button
                         InkWell(
@@ -355,7 +287,7 @@ class _GrabHudState extends State<GrabHud> {
                           ),
                         ),
 
-                        const SizedBox(width: 2),
+                        const SizedBox(width: 4),
 
                         // PiP Tuck to Side Button
                         InkWell(
@@ -373,7 +305,7 @@ class _GrabHudState extends State<GrabHud> {
                           ),
                         ),
 
-                        const SizedBox(width: 2),
+                        const SizedBox(width: 4),
 
                         // Close button
                         InkWell(
@@ -385,6 +317,92 @@ class _GrabHudState extends State<GrabHud> {
                           child: const Padding(
                             padding: EdgeInsets.all(4),
                             child: Icon(Icons.close_rounded, size: 17, color: Colors.white60),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Row 2: Action Bar (Multi-Grab Toggle + Primary Copy Button)
+                    Row(
+                      children: [
+                        // Multi-Grab Toggle Button
+                        InkWell(
+                          onTap: () => widget.controller.toggleMultiSelectMode(),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isMulti
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0x226366F1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isMulti
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0x446366F1),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isMulti ? Icons.check_box_rounded : Icons.add_box_rounded,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isMulti ? 'Multi (${batch.length})' : '+ Multi',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        // Copy Button (Expanded with ample touch target)
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => widget.controller.copyActiveContext(),
+                            icon: Icon(
+                              hasCopied ? Icons.check_circle : Icons.copy_rounded,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              hasCopied
+                                  ? (batch.length > 1 ? 'Copied All (${batch.length})!' : 'Copied!')
+                                  : (batch.length > 1
+                                      ? 'Grab All (${batch.length})'
+                                      : 'Grab Context'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: hasCopied
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF6366F1),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -496,7 +514,8 @@ class _GrabHudState extends State<GrabHud> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (candidate.bounds != null)
+                          if (candidate.bounds != null) ...[
+                            const SizedBox(width: 8),
                             Text(
                               '${candidate.bounds!.width.toStringAsFixed(1)} x ${candidate.bounds!.height.toStringAsFixed(1)}',
                               style: const TextStyle(
@@ -505,6 +524,7 @@ class _GrabHudState extends State<GrabHud> {
                                 fontFamily: 'monospace',
                               ),
                             ),
+                          ],
                         ],
                       ),
                     ],
