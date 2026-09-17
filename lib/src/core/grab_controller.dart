@@ -31,6 +31,8 @@ class GrabController extends ChangeNotifier {
   WidgetCandidate? _hoveredCandidate;
   WidgetCandidate? _selectedCandidate;
   List<WidgetCandidate> _candidateTree = const [];
+  final List<WidgetCandidate> _batchCandidates = [];
+  bool _isMultiSelectMode = false;
 
   Timer? _copiedFeedbackTimer;
 
@@ -42,6 +44,15 @@ class GrabController extends ChangeNotifier {
 
   /// Whether context was recently copied to clipboard (used for feedback UI).
   bool get hasCopied => _hasCopied;
+
+  /// Whether multi-widget selection mode is enabled.
+  bool get isMultiSelectMode => _isMultiSelectMode;
+
+  /// List of queued widgets in the multi-select batch.
+  List<WidgetCandidate> get batchCandidates => List.unmodifiable(_batchCandidates);
+
+  /// Whether there are multiple widgets currently batched.
+  bool get hasBatch => _batchCandidates.isNotEmpty;
 
   /// The widget currently under the cursor/pointer.
   WidgetCandidate? get hoveredCandidate => _hoveredCandidate;
@@ -111,12 +122,64 @@ class GrabController extends ChangeNotifier {
   }
 
   /// Selects and locks a widget upon click or tap.
+  ///
+  /// If [isMultiSelectMode] is active, also appends it to [batchCandidates].
   void selectCandidate(WidgetCandidate candidate) {
     if (candidate.result == null) {
       candidate.attachResult(bridge.resolveElement(candidate.element));
     }
     _selectedCandidate = candidate;
     _isInspecting = false;
+
+    if (_isMultiSelectMode) {
+      _addToBatchInternal(candidate);
+    }
+
+    notifyListeners();
+  }
+
+  /// Toggles multi-select mode. If turning on and there is an active candidate,
+  /// it is automatically added to the batch.
+  void toggleMultiSelectMode() {
+    _isMultiSelectMode = !_isMultiSelectMode;
+    if (_isMultiSelectMode && _selectedCandidate != null) {
+      _addToBatchInternal(_selectedCandidate!);
+    }
+    notifyListeners();
+  }
+
+  /// Adds a candidate to the multi-widget batch queue.
+  void addToBatch(WidgetCandidate candidate) {
+    _isMultiSelectMode = true;
+    _addToBatchInternal(candidate);
+    notifyListeners();
+  }
+
+  void _addToBatchInternal(WidgetCandidate candidate) {
+    if (candidate.result == null) {
+      candidate.attachResult(bridge.resolveElement(candidate.element));
+    }
+    final alreadyExists = _batchCandidates.any((c) => c.element == candidate.element);
+    if (!alreadyExists) {
+      _batchCandidates.add(candidate);
+    }
+  }
+
+  /// Removes a candidate from the batch queue by index.
+  void removeFromBatch(int index) {
+    if (index >= 0 && index < _batchCandidates.length) {
+      _batchCandidates.removeAt(index);
+      if (_batchCandidates.isEmpty) {
+        _isMultiSelectMode = false;
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Clears the multi-select batch queue.
+  void clearBatch() {
+    _batchCandidates.clear();
+    _isMultiSelectMode = false;
     notifyListeners();
   }
 
@@ -132,18 +195,31 @@ class GrabController extends ChangeNotifier {
     }
   }
 
-  /// Copies the currently active candidate context to the system clipboard.
+  /// Copies the currently active candidate (or entire multi-widget batch) to the system clipboard.
   Future<bool> copyActiveContext() async {
-    var result = activeResult;
-    // Ensure metadata is resolved before copying
-    if (result == null && activeCandidate != null) {
-      result = bridge.resolveElement(activeCandidate!.element);
-      activeCandidate!.attachResult(result);
+    final String formattedText;
+
+    if (_batchCandidates.length > 1) {
+      // Ensure all batch candidates have resolved metadata
+      for (final c in _batchCandidates) {
+        if (c.result == null) {
+          c.attachResult(bridge.resolveElement(c.element));
+        }
+      }
+      final results = _batchCandidates.map((c) => c.result!).toList();
+      formattedText = formatter.formatMultiple(results);
+    } else {
+      var result = activeResult;
+      // Ensure metadata is resolved before copying
+      if (result == null && activeCandidate != null) {
+        result = bridge.resolveElement(activeCandidate!.element);
+        activeCandidate!.attachResult(result);
+      }
+
+      if (result == null) return false;
+      formattedText = formatter.format(result);
     }
 
-    if (result == null) return false;
-
-    final formattedText = formatter.format(result);
     await Clipboard.setData(ClipboardData(text: formattedText));
 
     // Print to console so developers running on wireless/remote devices see it in their terminal
@@ -181,6 +257,8 @@ class GrabController extends ChangeNotifier {
     _selectedCandidate = null;
     _hoveredCandidate = null;
     _candidateTree = const [];
+    _batchCandidates.clear();
+    _isMultiSelectMode = false;
     _hasCopied = false;
     _copiedFeedbackTimer?.cancel();
   }

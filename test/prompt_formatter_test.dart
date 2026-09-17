@@ -63,5 +63,25 @@ void main() {
       expect(output, contains('unknown location'));
       expect(output, isNot(contains('- **Size:**')));
     });
+
+    test('formatMultiple formats multiple widgets into single prompt', () {
+      const secondResult = GrabResult(
+        widgetName: 'RecentActivity',
+        filePath: 'lib/features/dashboard/recent_activity.dart',
+        line: 88,
+        column: 10,
+        ancestry: ['DashboardScreen', 'RecentActivity'],
+      );
+
+      const formatter = AiPromptFormatter();
+      final output = formatter.formatMultiple([sampleResult, secondResult]);
+
+      expect(output, contains('### 🎯 Selected Widgets (2)'));
+      expect(output, contains('#### 1. `ProfileCard`'));
+      expect(output, contains('lib/features/profile/profile_card.dart:42:15'));
+      expect(output, contains('#### 2. `RecentActivity`'));
+      expect(output, contains('lib/features/dashboard/recent_activity.dart:88:10'));
+      expect(output, contains('The user selected these 2 widgets on screen together.'));
+    });
   });
 }

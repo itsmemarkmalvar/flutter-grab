@@ -89,5 +89,83 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       expect(controller.hasCopied, isFalse);
     });
+
+    testWidgets('multi-select batch queues widgets and copies combined prompt', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                Text('Target A'),
+                Text('Target B'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final elementA = tester.element(find.text('Target A'));
+      final elementB = tester.element(find.text('Target B'));
+
+      final candidateA = WidgetCandidate(
+        element: elementA,
+        renderBox: elementA.renderObject as RenderBox?,
+        bounds: const Rect.fromLTWH(0, 0, 100, 30),
+        result: const GrabResult(
+          widgetName: 'TargetA',
+          filePath: 'lib/a.dart',
+          line: 15,
+        ),
+      );
+
+      final candidateB = WidgetCandidate(
+        element: elementB,
+        renderBox: elementB.renderObject as RenderBox?,
+        bounds: const Rect.fromLTWH(0, 40, 100, 30),
+        result: const GrabResult(
+          widgetName: 'TargetB',
+          filePath: 'lib/b.dart',
+          line: 25,
+        ),
+      );
+
+      controller.activate();
+      controller.toggleMultiSelectMode();
+      expect(controller.isMultiSelectMode, isTrue);
+
+      controller.selectCandidate(candidateA);
+      controller.selectCandidate(candidateB);
+
+      expect(controller.batchCandidates.length, 2);
+      expect(controller.hasBatch, isTrue);
+
+      String? copiedClipboardText;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'Clipboard.setData') {
+            final args = methodCall.arguments as Map<dynamic, dynamic>;
+            copiedClipboardText = args['text'] as String?;
+            return null;
+          }
+          return null;
+        },
+      );
+
+      final success = await controller.copyActiveContext();
+      expect(success, isTrue);
+      expect(copiedClipboardText, contains('Selected Widgets (2)'));
+      expect(copiedClipboardText, contains('#### 1. `TargetA`'));
+      expect(copiedClipboardText, contains('#### 2. `TargetB`'));
+
+      controller.removeFromBatch(0);
+      expect(controller.batchCandidates.length, 1);
+
+      controller.clearBatch();
+      expect(controller.batchCandidates.isEmpty, isTrue);
+      expect(controller.isMultiSelectMode, isFalse);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
   });
 }

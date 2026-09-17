@@ -36,6 +36,75 @@ class AiPromptFormatter {
     }
   }
 
+  /// Formats multiple [results] into a consolidated AI prompt.
+  String formatMultiple(List<GrabResult> results) {
+    if (results.isEmpty) return '';
+    if (results.length == 1) return format(results.first);
+
+    switch (style) {
+      case PromptFormatStyle.markdown:
+        return _formatMultipleMarkdown(results);
+      case PromptFormatStyle.xml:
+        return _formatMultipleXml(results);
+      case PromptFormatStyle.compact:
+        return results.map(_formatCompact).join('\n');
+    }
+  }
+
+  String _formatMultipleMarkdown(List<GrabResult> results) {
+    final buffer = StringBuffer();
+    buffer.writeln('<!-- Flutter Grab Context (Multi-Widget Selection) -->');
+    buffer.writeln('### 🎯 Selected Widgets (${results.length})');
+    buffer.writeln();
+
+    for (var i = 0; i < results.length; i++) {
+      final result = results[i];
+      buffer.writeln('#### ${i + 1}. `${result.widgetName}`');
+      buffer.writeln('- **Source File:** `${result.locationString}`');
+
+      if (includeAncestry && result.ancestry.isNotEmpty) {
+        final fullAncestry = [...result.ancestry];
+        if (fullAncestry.isEmpty || fullAncestry.last != result.widgetName) {
+          fullAncestry.add(result.widgetName);
+        }
+        buffer.writeln('- **Widget Hierarchy:** `${fullAncestry.join(' > ')}`');
+      }
+
+      if (includeDimensions && result.bounds != null) {
+        buffer.writeln('- **Render Size:** `${result.dimensionsString}`');
+      }
+      buffer.writeln();
+    }
+
+    buffer.writeln(
+      '> **Note for AI:** The user selected these ${results.length} widgets on screen together. '
+      'Refer to the source files above to inspect or modify their implementation.',
+    );
+
+    return buffer.toString().trim();
+  }
+
+  String _formatMultipleXml(List<GrabResult> results) {
+    final buffer = StringBuffer();
+    buffer.writeln('<flutter_grab_multi_context count="${results.length}">');
+    for (final res in results) {
+      buffer.writeln('  <widget>');
+      buffer.writeln('    <name>${res.widgetName}</name>');
+      if (res.filePath != null) buffer.writeln('    <file>${res.filePath}</file>');
+      if (res.line != null) buffer.writeln('    <line>${res.line}</line>');
+      if (res.column != null) buffer.writeln('    <column>${res.column}</column>');
+      if (includeAncestry && res.ancestry.isNotEmpty) {
+        buffer.writeln('    <ancestry>${res.ancestryString}</ancestry>');
+      }
+      if (includeDimensions && res.bounds != null) {
+        buffer.writeln('    <dimensions>${res.dimensionsString}</dimensions>');
+      }
+      buffer.writeln('  </widget>');
+    }
+    buffer.write('</flutter_grab_multi_context>');
+    return buffer.toString();
+  }
+
   String _formatMarkdown(GrabResult result) {
     final buffer = StringBuffer();
     buffer.writeln('<!-- Flutter Grab Context -->');

@@ -105,19 +105,17 @@ void main() {
     expect(find.text('BottomNavigationBar'), findsOneWidget);
     expect(find.text('Grab Context'), findsOneWidget);
 
-    // Verify AnimatedPositioned has top != null and bottom == null
+    // Verify AnimatedPositioned docks at top (top < 100)
     final animatedPositioned = tester.widget<AnimatedPositioned>(find.byType(AnimatedPositioned));
-    expect(animatedPositioned.top, isNotNull);
-    expect(animatedPositioned.bottom, isNull);
+    expect(animatedPositioned.top, lessThan(100));
 
     // Tap flip button
     await tester.tap(find.byIcon(Icons.arrow_downward_rounded));
     await tester.pumpAndSettle();
 
-    // Now it should be flipped to the bottom
+    // Now it should be flipped to the bottom (top > 300)
     final flipped = tester.widget<AnimatedPositioned>(find.byType(AnimatedPositioned));
-    expect(flipped.top, isNull);
-    expect(flipped.bottom, isNotNull);
+    expect(flipped.top, greaterThan(300));
   });
 
   testWidgets('GrabHud docks at bottom when target widget is in top half', (tester) async {
@@ -153,11 +151,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final animatedPositioned = tester.widget<AnimatedPositioned>(find.byType(AnimatedPositioned));
-    expect(animatedPositioned.top, isNull);
-    expect(animatedPositioned.bottom, isNotNull);
+    expect(animatedPositioned.top, greaterThan(300));
   });
 
-  testWidgets('GrabHud flips position on vertical swipe gesture', (tester) async {
+  testWidgets('GrabHud moves smoothly on vertical drag gesture', (tester) async {
     final controller = GrabController();
 
     await tester.pumpWidget(
@@ -192,25 +189,66 @@ void main() {
 
     // Initially at bottom
     var positioned = tester.widget<AnimatedPositioned>(find.byType(AnimatedPositioned));
-    expect(positioned.top, isNull);
-    expect(positioned.bottom, isNotNull);
+    final initialTop = positioned.top!;
+    expect(initialTop, greaterThan(300));
 
-    // Swipe up on HUD
-    await tester.fling(find.text('AppBar'), const Offset(0, -500), 1000);
+    // Drag up by 200px
+    await tester.drag(find.text('AppBar'), const Offset(0, -200));
     await tester.pumpAndSettle();
 
-    // Now moved to top
+    // Now moved upwards
     positioned = tester.widget<AnimatedPositioned>(find.byType(AnimatedPositioned));
-    expect(positioned.top, isNotNull);
-    expect(positioned.bottom, isNull);
+    expect(positioned.top!, lessThan(initialTop));
+  });
 
-    // Swipe down on HUD
-    await tester.fling(find.text('AppBar'), const Offset(0, 500), 1000);
+  testWidgets('GrabHud tucks to side in PiP mode and restores on tap', (tester) async {
+    final controller = GrabController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FlutterGrab(
+          controller: controller,
+          child: const Scaffold(
+            body: SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+
+    controller.activate();
+    await tester.pump();
+
+    final dummyElement = tester.element(find.byType(Scaffold));
+    final candidate = WidgetCandidate(
+      element: dummyElement,
+      renderBox: dummyElement.renderObject as RenderBox?,
+      bounds: const Rect.fromLTWH(50, 200, 200, 50),
+      result: const GrabResult(
+        widgetName: 'MetricCard',
+        filePath: 'lib/metric.dart',
+        line: 12,
+      ),
+    );
+
+    controller.selectCandidate(candidate);
     await tester.pumpAndSettle();
 
-    // Back to bottom
-    positioned = tester.widget<AnimatedPositioned>(find.byType(AnimatedPositioned));
-    expect(positioned.top, isNull);
-    expect(positioned.bottom, isNotNull);
+    // Full card is visible with Grab Context button
+    expect(find.text('Grab Context'), findsOneWidget);
+
+    // Tap tuck button
+    await tester.tap(find.byIcon(Icons.arrow_forward_ios_rounded));
+    await tester.pumpAndSettle();
+
+    // Full card buttons are collapsed, edge pill is visible
+    expect(find.text('Grab Context'), findsNothing);
+    expect(find.text('🎯'), findsOneWidget);
+
+    // Tap edge pill to untuck
+    await tester.tap(find.text('🎯'));
+    await tester.pumpAndSettle();
+
+    // Restored to full card
+    expect(find.text('Grab Context'), findsOneWidget);
   });
 }

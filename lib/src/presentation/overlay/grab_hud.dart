@@ -4,9 +4,11 @@ import '../../core/widget_candidate.dart';
 
 /// Floating HUD banner that displays selected widget context, breadcrumbs, and copy button.
 ///
-/// Features smart adaptive positioning: automatically docks at the top when inspecting
-/// widgets in the lower half of the screen (e.g. BottomNavigationBar), and provides
-/// manual flip controls (button & swipe gestures) so developers can reposition anytime.
+/// Features:
+/// 1. Freeform 2D Dragging across the screen.
+/// 2. Video-call / PiP style tucking: minimizes to a side bezel tab so 100% of app UI is unobstructed.
+/// 3. Smart adaptive positioning: auto-positions away from target element.
+/// 4. Multi-Grab batch tray: collect and copy multiple widgets at once for AI prompts.
 class GrabHud extends StatefulWidget {
   const GrabHud({
     super.key,
@@ -25,6 +27,11 @@ class _GrabHudState extends State<GrabHud> {
   bool? _manualPositionOverride;
   WidgetCandidate? _lastCandidate;
 
+  // Freeform dragging & PiP edge-tuck state
+  double? _customTop;
+  bool _isTucked = false;
+  bool _tuckedToLeft = false;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -34,6 +41,8 @@ class _GrabHudState extends State<GrabHud> {
         if (candidate == null) {
           _lastCandidate = null;
           _manualPositionOverride = null;
+          _customTop = null;
+          _isTucked = false;
           return const SizedBox.shrink();
         }
 
@@ -41,41 +50,149 @@ class _GrabHudState extends State<GrabHud> {
         if (candidate.element != _lastCandidate?.element) {
           _lastCandidate = candidate;
           _manualPositionOverride = null;
+          _customTop = null;
+          _isTucked = false;
         }
 
         final result = candidate.result;
         final hasCopied = widget.controller.hasCopied;
+        final isMulti = widget.controller.isMultiSelectMode;
+        final batch = widget.controller.batchCandidates;
 
         final mediaQuery = MediaQuery.of(context);
         final screenHeight = mediaQuery.size.height;
         final safeTop = mediaQuery.padding.top;
         final safeBottom = mediaQuery.padding.bottom;
 
-        // Smart adaptive positioning:
-        // If the inspected widget is in the lower 45% of the screen (e.g. bottom nav, fab),
-        // dock HUD at the top so it never covers the target widget.
+        final defaultTop = safeTop + 14;
+        final defaultBottom = screenHeight - safeBottom - 180;
+
+        // Smart adaptive positioning (if not manually dragged)
         final bounds = candidate.bounds;
         final isTargetInLowerHalf =
             bounds != null ? (bounds.center.dy > screenHeight * 0.45) : false;
 
         final showAtTop = _manualPositionOverride ?? isTargetInLowerHalf;
+        final currentTop = _customTop ?? (showAtTop ? defaultTop : defaultBottom);
 
+        // ─────────────────────────────────────────────────────────────
+        // 1. Tucked State (Video-call / PiP edge tab)
+        // ─────────────────────────────────────────────────────────────
+        if (_isTucked) {
+          return AnimatedPositioned(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            top: currentTop.clamp(safeTop + 10, screenHeight - safeBottom - 50),
+            left: _tuckedToLeft ? 0 : null,
+            right: !_tuckedToLeft ? 0 : null,
+            child: GestureDetector(
+              onTap: () => setState(() => _isTucked = false),
+              onPanUpdate: (details) {
+                setState(() {
+                  _customTop = (currentTop + details.delta.dy)
+                      .clamp(safeTop + 10, screenHeight - safeBottom - 50);
+                });
+              },
+              child: Material(
+                elevation: 10,
+                borderRadius: BorderRadius.horizontal(
+                  left: _tuckedToLeft ? Radius.zero : const Radius.circular(20),
+                  right: _tuckedToLeft ? const Radius.circular(20) : Radius.zero,
+                ),
+                color: const Color(0xF0181825),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.horizontal(
+                      left: _tuckedToLeft ? Radius.zero : const Radius.circular(20),
+                      right: _tuckedToLeft ? const Radius.circular(20) : Radius.zero,
+                    ),
+                    border: Border.all(color: const Color(0xFF6366F1), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _tuckedToLeft
+                            ? Icons.chevron_right_rounded
+                            : Icons.chevron_left_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('🎯', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 4),
+                      if (batch.length > 1) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${batch.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          candidate.widgetName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 2. Full HUD Card (Draggable & Tuckable)
+        // ─────────────────────────────────────────────────────────────
         return AnimatedPositioned(
-          duration: const Duration(milliseconds: 220),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           left: 16,
           right: 16,
-          top: showAtTop ? safeTop + 12 : null,
-          bottom: !showAtTop ? safeBottom + 16 : null,
+          top: currentTop.clamp(safeTop + 10, screenHeight - safeBottom - 190),
           child: GestureDetector(
-            onVerticalDragEnd: (details) {
-              final vy = details.primaryVelocity ?? 0;
-              if (vy > 250 && showAtTop) {
-                // Swiped down while at top -> move to bottom
-                setState(() => _manualPositionOverride = false);
-              } else if (vy < -250 && !showAtTop) {
-                // Swiped up while at bottom -> move to top
-                setState(() => _manualPositionOverride = true);
+            onPanUpdate: (details) {
+              setState(() {
+                _customTop = (currentTop + details.delta.dy)
+                    .clamp(safeTop + 10, screenHeight - safeBottom - 190);
+              });
+            },
+            onPanEnd: (details) {
+              final vx = details.velocity.pixelsPerSecond.dx;
+              // Flick right or left to tuck
+              if (vx > 600) {
+                setState(() {
+                  _isTucked = true;
+                  _tuckedToLeft = false;
+                });
+              } else if (vx < -600) {
+                setState(() {
+                  _isTucked = true;
+                  _tuckedToLeft = true;
+                });
               }
             },
             child: Material(
@@ -95,9 +212,16 @@ class _GrabHudState extends State<GrabHud> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Row: Widget name + File Location + Action Buttons
+                    // Header Row: Drag Handle + Widget Name + Action Buttons
                     Row(
                       children: [
+                        // Drag Indicator
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(Icons.drag_indicator_rounded,
+                              size: 16, color: Colors.white38),
+                        ),
+
                         // Accent badge
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -133,27 +257,74 @@ class _GrabHudState extends State<GrabHud> {
                           ),
                         ),
 
+                        // Multi-Grab Toggle Button
+                        InkWell(
+                          onTap: () => widget.controller.toggleMultiSelectMode(),
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isMulti
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0x226366F1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isMulti
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0x446366F1),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isMulti ? Icons.check_box_rounded : Icons.add_box_rounded,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  isMulti ? 'Multi (${batch.length})' : '+ Multi',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 6),
+
                         // Copy Button
                         ElevatedButton.icon(
                           onPressed: () => widget.controller.copyActiveContext(),
                           icon: Icon(
                             hasCopied ? Icons.check_circle : Icons.copy_rounded,
-                            size: 15,
+                            size: 14,
                             color: Colors.white,
                           ),
                           label: Text(
-                            hasCopied ? 'Copied!' : 'Grab Context',
+                            hasCopied
+                                ? (batch.length > 1 ? 'Copied All!' : 'Copied!')
+                                : (batch.length > 1
+                                    ? 'Grab All (${batch.length})'
+                                    : 'Grab Context'),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                hasCopied ? const Color(0xFF10B981) : const Color(0xFF6366F1),
+                            backgroundColor: hasCopied
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFF6366F1),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                             minimumSize: Size.zero,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -161,13 +332,14 @@ class _GrabHudState extends State<GrabHud> {
                           ),
                         ),
 
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
 
                         // Flip Position Button
                         InkWell(
                           onTap: () {
                             setState(() {
                               _manualPositionOverride = !showAtTop;
+                              _customTop = !showAtTop ? defaultTop : defaultBottom;
                             });
                           },
                           borderRadius: BorderRadius.circular(20),
@@ -177,9 +349,27 @@ class _GrabHudState extends State<GrabHud> {
                               showAtTop
                                   ? Icons.arrow_downward_rounded
                                   : Icons.arrow_upward_rounded,
-                              size: 18,
+                              size: 16,
                               color: Colors.white60,
                             ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 2),
+
+                        // PiP Tuck to Side Button
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isTucked = true;
+                              _tuckedToLeft = false;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(Icons.arrow_forward_ios_rounded,
+                                size: 14, color: Colors.white60),
                           ),
                         ),
 
@@ -194,11 +384,99 @@ class _GrabHudState extends State<GrabHud> {
                           borderRadius: BorderRadius.circular(20),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.close_rounded, size: 18, color: Colors.white60),
+                            child: Icon(Icons.close_rounded, size: 17, color: Colors.white60),
                           ),
                         ),
                       ],
                     ),
+
+                    // Multi-Grab Batch Queue Chips
+                    if (batch.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0x15FFFFFF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text(
+                              'Queued for AI:',
+                              style: TextStyle(
+                                color: Color(0xFF93C5FD),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: SizedBox(
+                                height: 22,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: batch.length,
+                                  separatorBuilder: (_, __) => const SizedBox(width: 4),
+                                  itemBuilder: (context, i) {
+                                    final b = batch[i];
+                                    final isFocused = b.element == candidate.element;
+                                    return GestureDetector(
+                                      onTap: () => widget.controller.selectCandidate(b),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isFocused
+                                              ? const Color(0xFF6366F1)
+                                              : const Color(0x336366F1),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(
+                                            color: isFocused
+                                                ? const Color(0xFF818CF8)
+                                                : Colors.transparent,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              b.widgetName,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontFamily: 'monospace',
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            GestureDetector(
+                                              onTap: () => widget.controller.removeFromBatch(i),
+                                              child: const Icon(Icons.close, size: 10, color: Colors.white70),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            GestureDetector(
+                              onTap: () => widget.controller.clearBatch(),
+                              child: const Text(
+                                'Clear',
+                                style: TextStyle(
+                                  color: Colors.redAccent,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // File Path & Line Info
                     if (candidate.filePath != null) ...[
