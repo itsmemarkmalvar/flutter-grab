@@ -171,17 +171,14 @@ class _GrabHudState extends State<GrabHud> {
                             });
                           },
                           borderRadius: BorderRadius.circular(20),
-                          child: Tooltip(
-                            message: showAtTop ? 'Move to bottom' : 'Move to top',
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                showAtTop
-                                    ? Icons.arrow_downward_rounded
-                                    : Icons.arrow_upward_rounded,
-                                size: 18,
-                                color: Colors.white60,
-                              ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              showAtTop
+                                  ? Icons.arrow_downward_rounded
+                                  : Icons.arrow_upward_rounded,
+                              size: 18,
+                              color: Colors.white60,
                             ),
                           ),
                         ),
