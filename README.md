@@ -1,6 +1,6 @@
 # 🎯 flutter_grab
 
-[![pub package](https://img.shields.io/badge/pub-v0.1.0-blue.svg)](https://pub.dev)
+[![pub package](https://img.shields.io/badge/pub-v0.1.4-blue.svg)](https://pub.dev/packages/flutter_grab)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Flutter Grab** is a development-only productivity tool for Flutter applications—inspired by `react-grab` and `react-native-grab`—designed to eliminate the **"search tax"** when using AI coding assistants (like **Cursor**, **Claude Code**, **Antigravity**, or **GitHub Copilot**).
@@ -55,7 +55,7 @@ Add `flutter_grab` to your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  flutter_grab: ^0.1.0
+  flutter_grab: ^0.1.4
 ```
 
 ### 2. Wrap Your App

@@ -46,9 +46,9 @@ if (command === 'init') {
   if (!pubspec.includes('flutter_grab:')) {
     console.log('➕ Adding flutter_grab to dev_dependencies...');
     if (pubspec.includes('dev_dependencies:')) {
-      pubspec = pubspec.replace('dev_dependencies:', 'dev_dependencies:\n  flutter_grab: ^0.1.0');
+      pubspec = pubspec.replace('dev_dependencies:', 'dev_dependencies:\n  flutter_grab: ^0.1.4');
     } else {
-      pubspec += '\ndev_dependencies:\n  flutter_grab: ^0.1.0\n';
+      pubspec += '\ndev_dependencies:\n  flutter_grab: ^0.1.4\n';
     }
     fs.writeFileSync(pubspecPath, pubspec, 'utf8');
     console.log(`${green}✔ Added flutter_grab to dev_dependencies${reset}`);

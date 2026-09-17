@@ -30,10 +30,10 @@ void main(List<String> args) async {
     if (pubspecContent.contains('dev_dependencies:')) {
       pubspecContent = pubspecContent.replaceFirst(
         'dev_dependencies:',
-        'dev_dependencies:\n  flutter_grab: ^0.1.0',
+        'dev_dependencies:\n  flutter_grab: ^0.1.4',
       );
     } else {
-      pubspecContent += '\ndev_dependencies:\n  flutter_grab: ^0.1.0\n';
+      pubspecContent += '\ndev_dependencies:\n  flutter_grab: ^0.1.4\n';
     }
     await pubspecFile.writeAsString(pubspecContent);
     print('\x1B[32m✔ Added flutter_grab to dev_dependencies\x1B[0m');
