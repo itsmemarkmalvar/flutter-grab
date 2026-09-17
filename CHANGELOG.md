@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+- **CLI & Installer Updates**: Updated `npx flutter-grab init` and `dart run flutter_grab:init` installer scripts to default to latest `flutter_grab` releases.
+- **Documentation & Example App**: Updated package badges, installation guides, and modernized example theme.
+
 ## 0.1.4
 - **Multi-Grab / Batch Selection**: Select and queue multiple widgets across the screen, then copy a single consolidated context bundle for AI coding assistants.
 - **Ultra-Token-Friendly AI Output**: Streamlined prompt formatting reduces AI token consumption by ~68% with compact hierarchy and direct `Widget → file:line:col (WxH)` mapping.
