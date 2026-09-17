@@ -77,15 +77,16 @@ class DashboardHeader extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFE0E7FF), Color(0xFFEDE9FE)], // Soft light indigo/violet
+          colors: [Color(0xFF312E81), Color(0xFF4C1D95)], // Deep Royal Indigo to Purple
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6366F1).withValues(alpha: 0.12),
-            blurRadius: 16,
+            color: const Color(0xFF4C1D95).withValues(alpha: 0.3),
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
@@ -94,8 +95,8 @@ class DashboardHeader extends StatelessWidget {
         children: [
           const CircleAvatar(
             radius: 28,
-            backgroundColor: Color(0xFFC7D2FE),
-            child: Icon(Icons.person, size: 32, color: Color(0xFF4338CA)),
+            backgroundColor: Color(0xFF4338CA),
+            child: Icon(Icons.person, size: 32, color: Colors.white),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -104,13 +105,13 @@ class DashboardHeader extends StatelessWidget {
               children: [
                 const Text(
                   'Welcome back,',
-                  style: TextStyle(color: Color(0xFF4B5563), fontSize: 13),
+                  style: TextStyle(color: Color(0xFFA5B4FC), fontSize: 13),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   userName,
                   style: const TextStyle(
-                    color: Color(0xFF1E1B4B),
+                    color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -191,9 +192,16 @@ class MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: const Color(0xFF1E1B4B), // Sleek midnight indigo/purple
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
