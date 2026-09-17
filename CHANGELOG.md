@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+- **Multi-Grab / Batch Selection**: Select and queue multiple widgets across the screen, then copy a single consolidated context bundle for AI coding assistants.
+- **Ultra-Token-Friendly AI Output**: Streamlined prompt formatting reduces AI token consumption by ~68% with compact hierarchy and direct `Widget → file:line:col (WxH)` mapping.
+- **Freeform Dragging & PiP Edge Tucking**: Drag the HUD anywhere on screen, or tuck it into a minimal side bezel pill (video-call style) to keep 100% of the screen unobstructed.
+- **Responsive 2-Row HUD Layout**: Restructured header and action bars to prevent horizontal overflow on narrow mobile viewports, with a 100% solid opaque background to prevent underlying UI bleed-through.
+
 ## 0.1.3
 - **Fix**: Removed `Tooltip` from `GrabHud` to prevent `No Overlay widget found` exception when used at the app root level.
 
