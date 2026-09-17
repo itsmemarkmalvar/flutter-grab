@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.3
+- **Fix**: Removed `Tooltip` from `GrabHud` to prevent `No Overlay widget found` exception when used at the app root level.
+
 ## 0.1.2
 - **Smart Adaptive HUD Positioning**: `GrabHud` now automatically flips to the top of the screen when inspecting widgets in the lower half of the screen (e.g. `BottomNavigationBar`, FAB, bottom sheets) so it never covers the target element.
 - **Manual Flip & Swipe Controls**: Added a header flip button (↕) and vertical swipe gestures to reposition the HUD between top and bottom on demand.
