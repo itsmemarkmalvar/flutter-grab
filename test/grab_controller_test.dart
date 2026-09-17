@@ -154,9 +154,9 @@ void main() {
 
       final success = await controller.copyActiveContext();
       expect(success, isTrue);
-      expect(copiedClipboardText, contains('Selected Widgets (2)'));
-      expect(copiedClipboardText, contains('#### 1. `TargetA`'));
-      expect(copiedClipboardText, contains('#### 2. `TargetB`'));
+      expect(copiedClipboardText, contains('Flutter Grab (2 Widgets)'));
+      expect(copiedClipboardText, contains('1. `TargetA` → `lib/a.dart:15`'));
+      expect(copiedClipboardText, contains('2. `TargetB` → `lib/b.dart:25`'));
 
       controller.removeFromBatch(0);
       expect(controller.batchCandidates.length, 1);

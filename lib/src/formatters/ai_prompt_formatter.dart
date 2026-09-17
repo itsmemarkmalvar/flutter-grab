@@ -1,3 +1,4 @@
+import 'dart:ui';
 import '../core/grab_result.dart';
 
 /// Supported prompt formatting styles for AI coding assistants.
@@ -53,35 +54,43 @@ class AiPromptFormatter {
 
   String _formatMultipleMarkdown(List<GrabResult> results) {
     final buffer = StringBuffer();
-    buffer.writeln('<!-- Flutter Grab Context (Multi-Widget Selection) -->');
-    buffer.writeln('### 🎯 Selected Widgets (${results.length})');
+    buffer.writeln('### 🎯 Flutter Grab (${results.length} Widgets)');
     buffer.writeln();
 
     for (var i = 0; i < results.length; i++) {
       final result = results[i];
-      buffer.writeln('#### ${i + 1}. `${result.widgetName}`');
-      buffer.writeln('- **Source File:** `${result.locationString}`');
+      final sizeStr = (includeDimensions && result.bounds != null)
+          ? ' (${_formatSize(result.bounds!)})'
+          : '';
+      buffer.writeln('${i + 1}. `${result.widgetName}` → `${result.locationString}`$sizeStr');
 
       if (includeAncestry && result.ancestry.isNotEmpty) {
-        final fullAncestry = [...result.ancestry];
-        if (fullAncestry.isEmpty || fullAncestry.last != result.widgetName) {
-          fullAncestry.add(result.widgetName);
-        }
-        buffer.writeln('- **Widget Hierarchy:** `${fullAncestry.join(' > ')}`');
+        buffer.writeln('   Hierarchy: `${_compactAncestry(result)}`');
       }
-
-      if (includeDimensions && result.bounds != null) {
-        buffer.writeln('- **Render Size:** `${result.dimensionsString}`');
-      }
-      buffer.writeln();
     }
 
-    buffer.writeln(
-      '> **Note for AI:** The user selected these ${results.length} widgets on screen together. '
-      'Refer to the source files above to inspect or modify their implementation.',
-    );
-
     return buffer.toString().trim();
+  }
+
+  String _compactAncestry(GrabResult result) {
+    final fullAncestry = [...result.ancestry];
+    if (fullAncestry.isEmpty || fullAncestry.last != result.widgetName) {
+      fullAncestry.add(result.widgetName);
+    }
+    if (fullAncestry.length <= 4) {
+      return fullAncestry.join(' > ');
+    }
+    return '${fullAncestry.first} > ... > ${fullAncestry.sublist(fullAncestry.length - 2).join(' > ')}';
+  }
+
+  String _formatSize(Rect bounds) {
+    final w = bounds.width.truncateToDouble() == bounds.width
+        ? bounds.width.toInt().toString()
+        : bounds.width.toStringAsFixed(1);
+    final h = bounds.height.truncateToDouble() == bounds.height
+        ? bounds.height.toInt().toString()
+        : bounds.height.toStringAsFixed(1);
+    return '${w}x$h';
   }
 
   String _formatMultipleXml(List<GrabResult> results) {
