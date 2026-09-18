@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_grab/flutter_grab.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -250,5 +251,79 @@ void main() {
 
     // Restored to full card
     expect(find.text('Grab Context'), findsOneWidget);
+  });
+
+  testWidgets('GrabHud renders + 📸 button and triggers screenshot copy', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (message) async => null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('pasteboard'), (call) async => true);
+
+    final controller = GrabController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FlutterGrab(
+          controller: controller,
+          child: const Scaffold(
+            body: Center(
+              child: Text('SnapshotTarget'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    controller.setScreenshotCaptureCallback((bounds) async {
+      return WidgetScreenshot(
+        bytes: Uint8List.fromList([
+          0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+          0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+          0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+          0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
+          0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41,
+          0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+          0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
+          0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
+          0x42, 0x60, 0x82,
+        ]),
+        base64DataUri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        width: 150,
+        height: 40,
+      );
+    });
+
+    controller.activate();
+    await tester.pump();
+
+    final dummyElement = tester.element(find.text('SnapshotTarget'));
+    final candidate = WidgetCandidate(
+      element: dummyElement,
+      renderBox: dummyElement.renderObject as RenderBox?,
+      bounds: const Rect.fromLTWH(100, 100, 150, 40),
+      result: const GrabResult(
+        widgetName: 'Text',
+        filePath: 'lib/snapshot_target.dart',
+        line: 5,
+      ),
+    );
+
+    controller.selectCandidate(candidate);
+    await tester.pumpAndSettle();
+
+    expect(find.text('+ 📸'), findsOneWidget);
+
+    // Tap the screenshot button
+    await tester.tap(find.text('+ 📸'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Shot!'), findsOneWidget);
+    expect(controller.hasCopiedScreenshot, isTrue);
+    expect(controller.activeResult?.hasScreenshot, isTrue);
+
+    // Drain the 2-second copied feedback timer
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
   });
 }

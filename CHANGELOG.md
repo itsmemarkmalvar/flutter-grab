@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+- **📸 Multimodal Widget Screenshot (`Grab + Shot`)**:
+  - Tapping **`+ 📸`** (`Shot!`) captures a pixel-perfect, high-DPI Retina PNG snapshot of the selected widget.
+  - Automatically writes the cropped PNG file to `/tmp/flutter_grab/<WidgetName>.png` (or device sandbox temp) via pure Dart (`dart:io`), requiring zero rebuilds to inspect visually.
+  - Formats AI prompts with a compact `file://` link (`- **📸 Screenshot:** file:///tmp/flutter_grab/<WidgetName>.png`), adding only ~40 tokens instead of 160KB Base64 bloat so multimodal AI models (Claude, GPT-4o, Cursor agent) can inspect visual UI state directly.
+  - Direct OS Pasteboard support via `pasteboard` for pasting raw PNG image binary into Figma, Slack, Discord, or image-enabled AI chat inputs.
+  - Added live micro-thumbnail visual preview in the HUD title bar when a screenshot is captured.
+- **🛡️ Root-Level Release Guard (`!kDebugMode`)**:
+  - Hardened `FlutterGrab.builder`, `FlutterGrab.chain`, and `FlutterGrab.build` with root-level compile-time `!kDebugMode` bypass, ensuring all Grab controllers, HUD overlays, and wrappers are completely dead-code tree-shaken in release APKs and production bundles.
+
 ## 0.1.5
 - **CLI & Installer Updates**: Updated `npx flutter-grab init` and `dart run flutter_grab:init` installer scripts to default to latest `flutter_grab` releases.
 - **Documentation & Example App**: Updated package badges, installation guides, and modernized example theme.

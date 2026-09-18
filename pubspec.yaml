@@ -1,6 +1,6 @@
 name: flutter_grab
 description: "A development-only visual widget grabber for Flutter apps to copy source file, line number, and component context for AI coding assistants (Cursor, Claude, Copilot)."
-version: 0.1.5
+version: 0.2.0
 homepage: https://github.com/itsmemarkmalvar/flutter-grab
 repository: https://github.com/itsmemarkmalvar/flutter-grab
 issue_tracker: https://github.com/itsmemarkmalvar/flutter-grab/issues
@@ -12,6 +12,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  pasteboard: ^0.5.0
 
 dev_dependencies:
   flutter_test:

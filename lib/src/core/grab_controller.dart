@@ -1,12 +1,18 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:pasteboard/pasteboard.dart';
 
 import '../formatters/ai_prompt_formatter.dart';
 import '../inspector/hit_tester.dart';
 import '../inspector/widget_inspector_bridge.dart';
+import '../inspector/widget_screenshotter.dart';
+import '../utils/file_saver.dart';
 import 'grab_result.dart';
 import 'widget_candidate.dart';
+
+/// Callback signature for capturing widget screenshots.
+typedef ScreenshotCaptureCallback = Future<WidgetScreenshot?> Function(Rect? bounds);
 
 /// State controller that orchestrates widget hit-testing, metadata resolution, and clipboard export.
 ///
@@ -24,9 +30,13 @@ class GrabController extends ChangeNotifier {
   final WidgetInspectorBridge bridge;
   final AiPromptFormatter formatter;
 
+  ScreenshotCaptureCallback? _screenshotCaptureCallback;
+
   bool _isActive = false;
   bool _isInspecting = false;
   bool _hasCopied = false;
+  bool _hasCopiedScreenshot = false;
+  bool _isCapturingScreenshot = false;
 
   WidgetCandidate? _hoveredCandidate;
   WidgetCandidate? _selectedCandidate;
@@ -44,6 +54,17 @@ class GrabController extends ChangeNotifier {
 
   /// Whether context was recently copied to clipboard (used for feedback UI).
   bool get hasCopied => _hasCopied;
+
+  /// Whether context including a visual screenshot was recently copied.
+  bool get hasCopiedScreenshot => _hasCopiedScreenshot;
+
+  /// Whether a screenshot is currently being captured.
+  bool get isCapturingScreenshot => _isCapturingScreenshot;
+
+  /// Sets the callback to capture screenshots from the app root RepaintBoundary.
+  void setScreenshotCaptureCallback(ScreenshotCaptureCallback? callback) {
+    _screenshotCaptureCallback = callback;
+  }
 
   /// Whether multi-widget selection mode is enabled.
   bool get isMultiSelectMode => _isMultiSelectMode;
@@ -244,6 +265,96 @@ class GrabController extends ChangeNotifier {
     return true;
   }
 
+  /// Captures a visual screenshot for the given [candidate] if not already captured.
+  Future<WidgetScreenshot?> captureScreenshotForCandidate(WidgetCandidate candidate) async {
+    if (_screenshotCaptureCallback == null) return null;
+    final shot = await _screenshotCaptureCallback!(candidate.bounds);
+    if (shot != null) {
+      final baseResult = candidate.result ?? bridge.resolveElement(candidate.element);
+      candidate.attachResult(baseResult.copyWith(
+        screenshotBytes: shot.bytes,
+        screenshotBase64: shot.base64DataUri,
+      ));
+      notifyListeners();
+    }
+    return shot;
+  }
+
+  /// Captures visual screenshot, saves PNG to disk, and writes context and image to the clipboard.
+  Future<bool> copyActiveContextWithScreenshot() async {
+    final candidate = activeCandidate;
+    if (candidate == null) return false;
+
+    _isCapturingScreenshot = true;
+    notifyListeners();
+
+    try {
+      if (candidate.result?.screenshotBytes == null) {
+        await captureScreenshotForCandidate(candidate);
+      }
+
+      final bytes = candidate.result?.screenshotBytes;
+      if (bytes != null) {
+        // 1. Save screenshot PNG directly to disk
+        final savedPath = saveScreenshotFile(candidate.widgetName, bytes);
+        if (savedPath != null) {
+          final base = candidate.result ?? bridge.resolveElement(candidate.element);
+          candidate.attachResult(base.copyWith(screenshotPath: savedPath));
+        }
+
+        // 2. Format AI prompt with code context AND the screenshot file link
+        final currentResult = candidate.result ?? bridge.resolveElement(candidate.element);
+        final formattedText = formatter.format(currentResult);
+
+        // 3. Set text clipboard so prompt can be pasted into any AI chat / editor
+        await Clipboard.setData(ClipboardData(text: formattedText));
+
+        // 4. Also write binary PNG image to the system clipboard (Pasteboard)
+        // so image-receiving apps (Preview, Slack, Figma, image chat) receive the image directly
+        try {
+          await Pasteboard.writeImage(bytes);
+          if (savedPath != null) {
+            await Pasteboard.writeFiles([savedPath]);
+          }
+        } catch (e) {
+          debugPrint(
+            '[Flutter Grab] Note: Pasteboard native image copy unavailable ($e). '
+            'Restart "flutter run" to link native plugins. Screenshot saved to file://$savedPath',
+          );
+        }
+
+        debugPrint('\n════════════════════ [🎯 Flutter Grab Screenshot Copied] ════════════════════\n'
+            'Target Widget: ${candidate.widgetName} (${candidate.result?.locationString})\n'
+            'Render Size: ${candidate.result?.dimensionsString}\n'
+            '${savedPath != null ? "📸 Screenshot File: file://$savedPath\n" : ""}'
+            '📸 Visual context copied to clipboard!\n'
+            '══════════════════════════════════════════════════════════════════════════════\n');
+
+        try {
+          HapticFeedback.mediumImpact();
+        } catch (_) {}
+
+        _hasCopiedScreenshot = true;
+        notifyListeners();
+        _copiedFeedbackTimer?.cancel();
+        _copiedFeedbackTimer = Timer(const Duration(milliseconds: 2000), () {
+          _hasCopiedScreenshot = false;
+          notifyListeners();
+        });
+
+        return true;
+      }
+
+      return false;
+    } catch (e, st) {
+      debugPrint('[Flutter Grab] Error capturing screenshot: $e\n$st');
+      return false;
+    } finally {
+      _isCapturingScreenshot = false;
+      notifyListeners();
+    }
+  }
+
   /// Clears current selection while keeping Grab mode active.
   void clearSelection() {
     _selectedCandidate = null;
@@ -260,6 +371,8 @@ class GrabController extends ChangeNotifier {
     _batchCandidates.clear();
     _isMultiSelectMode = false;
     _hasCopied = false;
+    _hasCopiedScreenshot = false;
+    _isCapturingScreenshot = false;
     _copiedFeedbackTimer?.cancel();
   }
 

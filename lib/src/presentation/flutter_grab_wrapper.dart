@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../core/grab_controller.dart';
+import '../inspector/widget_screenshotter.dart';
 import 'overlay/floating_trigger.dart';
 import 'overlay/grab_hud.dart';
 import 'overlay/highlight_painter.dart';
@@ -36,6 +38,8 @@ class _FlutterGrabWrapperState extends State<FlutterGrabWrapper> {
   bool _createdController = false;
 
   final GlobalKey _appContentKey = GlobalKey();
+  final GlobalKey _repaintBoundaryKey = GlobalKey();
+  final WidgetScreenshotter _screenshotter = const WidgetScreenshotter();
 
   @override
   void initState() {
@@ -46,10 +50,26 @@ class _FlutterGrabWrapperState extends State<FlutterGrabWrapper> {
       _controller = GrabController();
       _createdController = true;
     }
+    _attachScreenshotCallback();
+  }
+
+  void _attachScreenshotCallback() {
+    _controller.setScreenshotCaptureCallback((bounds) async {
+      final boundary =
+          _repaintBoundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final pixelRatio = View.maybeOf(context)?.devicePixelRatio ?? 2.0;
+      return _screenshotter.capture(
+        boundary: boundary,
+        bounds: bounds,
+        pixelRatio: pixelRatio,
+      );
+    });
   }
 
   @override
   void dispose() {
+    _controller.setScreenshotCaptureCallback(null);
     if (_createdController) {
       _controller.dispose();
     }
@@ -72,10 +92,13 @@ class _FlutterGrabWrapperState extends State<FlutterGrabWrapper> {
         return Stack(
           fit: StackFit.expand,
           children: [
-            // Base App Content (Scoped for Hit Testing)
-            KeyedSubtree(
-              key: _appContentKey,
-              child: widget.child,
+            // Base App Content (Scoped for Hit Testing and Screenshot Capture)
+            RepaintBoundary(
+              key: _repaintBoundaryKey,
+              child: KeyedSubtree(
+                key: _appContentKey,
+                child: widget.child,
+              ),
             ),
 
             // Active Inspection Layer

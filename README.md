@@ -1,6 +1,6 @@
 # 🎯 flutter_grab
 
-[![pub package](https://img.shields.io/badge/pub-v0.1.5-blue.svg)](https://pub.dev/packages/flutter_grab)
+[![pub package](https://img.shields.io/badge/pub-v0.2.0-blue.svg)](https://pub.dev/packages/flutter_grab)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Flutter Grab** is a development-only productivity tool for Flutter applications—inspired by `react-grab` and `react-native-grab`—designed to eliminate the **"search tax"** when using AI coding assistants (like **Cursor**, **Claude Code**, **Antigravity**, or **GitHub Copilot**).
@@ -11,13 +11,15 @@ Instead of hunting through deeply nested widget trees to find which `.dart` file
 
 ## ✨ Features
 
+- 📸 **Multimodal Widget Screenshots (`Grab + Shot`):** Tap **`+ 📸`** to crop and export a pixel-perfect Retina PNG screenshot of the inspected widget directly to your clipboard and local disk (`/tmp/flutter_grab/<Widget>.png`), ready for multimodal AI analysis with 0 token bloat.
 - 🔍 **Visual Element Inspection:** Tap or hover over any widget on-screen to reveal its bounding box, dimensions, and widget type.
 - 📍 **Source Code Location:** Extracts the exact source file path, line number, and column number directly via Flutter's debug `--track-widget-creation` instrumentation.
 - 🎯 **Smart "User Code" Detection:** Distinguishes your project's custom widgets from Flutter internal widgets (`Padding`, `Semantics`, `Directionality`).
 - 🍞 **Interactive Breadcrumbs:** Inspect the widget ancestor hierarchy and jump between leaf widgets and parent containers.
+- 📦 **Multi-Grab Batching:** Queue and copy multiple widgets at once into a consolidated context bundle for complex multi-widget AI prompts.
 - 📋 **AI-Ready Prompt Output:** Formats the captured context into clean Markdown or XML snippets ready to paste directly into your AI prompt.
 - ⌨️ **Desktop & Web Shortcuts:** Toggle Grab mode with `Cmd+Shift+C` (macOS) or `Ctrl+Shift+C` (Windows/Linux).
-- 📱 **Mobile-Friendly:** Draggable floating action pill designed for single-handed touch interactions on simulators and physical devices.
+- 📱 **Mobile-Friendly Draggable HUD:** Freeform 2D dragging and video-call style PiP edge-tucking keeps 100% of the screen unobstructed.
 - 🛡️ **Zero Release Overhead:** Completely inert and no-op in `release` and `profile` builds (`kDebugMode` guarded). 0% runtime penalty or binary leakage in production.
 
 ---
@@ -55,7 +57,7 @@ Add `flutter_grab` to your `pubspec.yaml`:
 
 ```yaml
 dev_dependencies:
-  flutter_grab: ^0.1.5
+  flutter_grab: ^0.2.0
 ```
 
 ### 2. Wrap Your App

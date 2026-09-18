@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'src/core/grab_controller.dart';
@@ -9,6 +10,7 @@ export 'src/core/widget_candidate.dart';
 export 'src/formatters/ai_prompt_formatter.dart';
 export 'src/inspector/hit_tester.dart';
 export 'src/inspector/widget_inspector_bridge.dart';
+export 'src/inspector/widget_screenshotter.dart';
 export 'src/presentation/flutter_grab_wrapper.dart';
 
 /// The primary widget entry point for Flutter Grab.
@@ -43,6 +45,9 @@ class FlutterGrab extends StatelessWidget {
 
   /// Helper builder for [MaterialApp.builder] or [WidgetsApp.builder].
   static Widget builder(BuildContext context, Widget? child) {
+    if (!kDebugMode) {
+      return child ?? const SizedBox.shrink();
+    }
     return FlutterGrab(
       child: child ?? const SizedBox.shrink(),
     );
@@ -60,12 +65,18 @@ class FlutterGrab extends StatelessWidget {
   static TransitionBuilder chain([TransitionBuilder? existingBuilder]) {
     return (BuildContext context, Widget? child) {
       final builtChild = existingBuilder != null ? existingBuilder(context, child) : child;
+      if (!kDebugMode) {
+        return builtChild ?? const SizedBox.shrink();
+      }
       return FlutterGrab(child: builtChild ?? const SizedBox.shrink());
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!kDebugMode) {
+      return child;
+    }
     return FlutterGrabWrapper(
       controller: controller,
       showFloatingTrigger: showFloatingTrigger,

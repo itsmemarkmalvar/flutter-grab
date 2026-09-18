@@ -19,11 +19,13 @@ class AiPromptFormatter {
     this.style = PromptFormatStyle.markdown,
     this.includeAncestry = true,
     this.includeDimensions = true,
+    this.includeScreenshot = false,
   });
 
   final PromptFormatStyle style;
   final bool includeAncestry;
   final bool includeDimensions;
+  final bool includeScreenshot;
 
   /// Formats the [result] according to the selected [style].
   String format(GrabResult result) {
@@ -67,6 +69,11 @@ class AiPromptFormatter {
       if (includeAncestry && result.ancestry.isNotEmpty) {
         buffer.writeln('   Hierarchy: `${_compactAncestry(result)}`');
       }
+      if (result.screenshotPath != null) {
+        buffer.writeln('   Screenshot: `file://${result.screenshotPath}`');
+      } else if (includeScreenshot && result.screenshotBase64 != null) {
+        buffer.writeln('   Screenshot: `<img src="${result.screenshotBase64}" width="240" />`');
+      }
     }
 
     return buffer.toString().trim();
@@ -108,6 +115,11 @@ class AiPromptFormatter {
       if (includeDimensions && res.bounds != null) {
         buffer.writeln('    <dimensions>${res.dimensionsString}</dimensions>');
       }
+      if (res.screenshotPath != null) {
+        buffer.writeln('    <screenshot_path>${res.screenshotPath}</screenshot_path>');
+      } else if (includeScreenshot && res.screenshotBase64 != null) {
+        buffer.writeln('    <screenshot_base64>${res.screenshotBase64}</screenshot_base64>');
+      }
       buffer.writeln('  </widget>');
     }
     buffer.write('</flutter_grab_multi_context>');
@@ -132,10 +144,24 @@ class AiPromptFormatter {
       buffer.writeln('- **Render Size:** `${result.dimensionsString}`');
     }
 
+    if (result.screenshotPath != null) {
+      buffer.writeln('- **📸 Screenshot:** `file://${result.screenshotPath}`');
+    } else if (includeScreenshot && result.screenshotBase64 != null) {
+      buffer.writeln();
+      buffer.writeln('#### 📸 Visual Snapshot (Base64 PNG)');
+      buffer.writeln('<details open>');
+      buffer.writeln('  <summary>Expand visual screenshot</summary>');
+      buffer.writeln('  <img src="${result.screenshotBase64}" alt="${result.widgetName} snapshot" width="360" />');
+      buffer.writeln('</details>');
+    }
+
     buffer.writeln();
+    final screenshotNote = result.screenshotPath != null
+        ? ' A visual screenshot is saved at `file://${result.screenshotPath}`.'
+        : '';
     buffer.writeln(
       '> **Note for AI:** The user selected this widget on screen. '
-      'Refer to `${result.locationString}` to inspect or modify its implementation.',
+      'Refer to `${result.locationString}` to inspect or modify its implementation.$screenshotNote',
     );
 
     return buffer.toString().trim();
@@ -159,6 +185,11 @@ class AiPromptFormatter {
     }
     if (includeDimensions && result.bounds != null) {
       buffer.writeln('  <dimensions>${result.dimensionsString}</dimensions>');
+    }
+    if (result.screenshotPath != null) {
+      buffer.writeln('  <screenshot_path>${result.screenshotPath}</screenshot_path>');
+    } else if (includeScreenshot && result.screenshotBase64 != null) {
+      buffer.writeln('  <screenshot_base64>${result.screenshotBase64}</screenshot_base64>');
     }
     buffer.write('</flutter_grab_context>');
     return buffer.toString();

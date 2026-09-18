@@ -81,5 +81,55 @@ void main() {
       expect(output, contains('2. `RecentActivity` → `lib/features/dashboard/recent_activity.dart:88:10`'));
       expect(output, contains('Hierarchy: `DashboardScreen > RecentActivity`'));
     });
+
+    test('formats markdown with screenshotBase64 correctly', () {
+      final shotResult = sampleResult.copyWith(
+        screenshotBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      );
+      const formatter = AiPromptFormatter(includeScreenshot: true);
+      final output = formatter.format(shotResult);
+
+      expect(output, contains('#### 📸 Visual Snapshot (Base64 PNG)'));
+      expect(output, contains('<details open>'));
+      expect(output, contains('<img src="data:image/png;base64,iVBORw0KGgoAAA'));
+    });
+
+    test('formats markdown with screenshotPath correctly without base64 bloat', () {
+      final shotResult = sampleResult.copyWith(
+        screenshotPath: '/tmp/flutter_grab/ProfileCard.png',
+      );
+      const formatter = AiPromptFormatter();
+      final output = formatter.format(shotResult);
+
+      expect(output, contains('- **📸 Screenshot:** `file:///tmp/flutter_grab/ProfileCard.png`'));
+      expect(output, contains('A visual screenshot is saved at `file:///tmp/flutter_grab/ProfileCard.png`.'));
+      expect(output, isNot(contains('Base64')));
+    });
+
+    test('formats multi-markdown with screenshotPath correctly', () {
+      final r1 = sampleResult.copyWith(screenshotPath: '/tmp/flutter_grab/ProfileCard.png');
+      final r2 = GrabResult(
+        widgetName: 'RecentActivity',
+        filePath: 'lib/features/dashboard/recent_activity.dart',
+        line: 88,
+        column: 10,
+        screenshotPath: '/tmp/flutter_grab/RecentActivity.png',
+      );
+      const formatter = AiPromptFormatter();
+      final output = formatter.formatMultiple([r1, r2]);
+
+      expect(output, contains('Screenshot: `file:///tmp/flutter_grab/ProfileCard.png`'));
+      expect(output, contains('Screenshot: `file:///tmp/flutter_grab/RecentActivity.png`'));
+    });
+
+    test('formats XML with screenshotPath correctly', () {
+      final shotResult = sampleResult.copyWith(
+        screenshotPath: '/tmp/flutter_grab/ProfileCard.png',
+      );
+      const formatter = AiPromptFormatter(style: PromptFormatStyle.xml);
+      final output = formatter.format(shotResult);
+
+      expect(output, contains('<screenshot_path>/tmp/flutter_grab/ProfileCard.png</screenshot_path>'));
+    });
   });
 }

@@ -56,6 +56,8 @@ class _GrabHudState extends State<GrabHud> {
 
         final result = candidate.result;
         final hasCopied = widget.controller.hasCopied;
+        final hasCopiedScreenshot = widget.controller.hasCopiedScreenshot;
+        final isCapturingScreenshot = widget.controller.isCapturingScreenshot;
         final isMulti = widget.controller.isMultiSelectMode;
         final batch = widget.controller.batchCandidates;
 
@@ -252,6 +254,20 @@ class _GrabHudState extends State<GrabHud> {
                         ),
                         const SizedBox(width: 8),
 
+                        // Thumbnail preview (if screenshot captured)
+                        if (result?.screenshotBytes != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.memory(
+                              result!.screenshotBytes!,
+                              width: 22,
+                              height: 22,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+
                         // Widget Name (Takes remaining space without crowding)
                         Expanded(
                           child: Text(
@@ -374,12 +390,14 @@ class _GrabHudState extends State<GrabHud> {
                           child: ElevatedButton.icon(
                             onPressed: () => widget.controller.copyActiveContext(),
                             icon: Icon(
-                              hasCopied ? Icons.check_circle : Icons.copy_rounded,
+                              hasCopied && !hasCopiedScreenshot
+                                  ? Icons.check_circle
+                                  : Icons.copy_rounded,
                               size: 15,
                               color: Colors.white,
                             ),
                             label: Text(
-                              hasCopied
+                              hasCopied && !hasCopiedScreenshot
                                   ? (batch.length > 1 ? 'Copied All (${batch.length})!' : 'Copied!')
                                   : (batch.length > 1
                                       ? 'Grab All (${batch.length})'
@@ -393,15 +411,71 @@ class _GrabHudState extends State<GrabHud> {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: hasCopied
+                              backgroundColor: hasCopied && !hasCopiedScreenshot
                                   ? const Color(0xFF10B981)
                                   : const Color(0xFF6366F1),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                               minimumSize: Size.zero,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        // Grab + Screenshot Button
+                        InkWell(
+                          onTap: isCapturingScreenshot
+                              ? null
+                              : () => widget.controller.copyActiveContextWithScreenshot(),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: hasCopiedScreenshot
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF312E81),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: hasCopiedScreenshot
+                                    ? const Color(0xFF34D399)
+                                    : const Color(0xFF818CF8),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isCapturingScreenshot)
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                else
+                                  Icon(
+                                    hasCopiedScreenshot
+                                        ? Icons.check_circle_rounded
+                                        : Icons.camera_alt_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  hasCopiedScreenshot ? 'Shot!' : '+ 📸',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
